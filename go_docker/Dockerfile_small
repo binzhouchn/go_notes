@@ -1,0 +1,23 @@
+FROM golang AS builder2
+
+ENV GO111MODULE=on \
+    GOPROXY=https://goproxy.cn,direct \
+    CGO_ENABLED=0 \
+    GOOS=linux
+
+WORKDIR /build
+COPY . .
+RUN go mod download
+RUN go build -ldflags "-s -w -X 'go-server_demo/common.Version=1.11' -extldflags '-static'" -o go-server_demo
+
+
+FROM alpine
+
+RUN apk update \
+    && apk upgrade \
+    && apk add --no-cache ca-certificates tzdata \
+    && update-ca-certificates 2>/dev/null || true
+
+COPY --from=builder2 /build/go-server_demo /
+EXPOSE 8080
+ENTRYPOINT ["/go-server_demo"]
